@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZKP Identity System</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 420px;
+            width: 100%;
+            margin: auto;
+            box-shadow: 0px 0px 15px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+
+        .card.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: 0.4s ease;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        input {
+            width: 100%;
+            max-width: 320px;
+            padding: 10px;
+            margin: 10px auto;
+            display: block;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+
+        .error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: -5px;
+            margin-bottom: 5px;
+            text-align: left;
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        button {
+            width: 100%;
+            max-width: 320px;
+            margin: 12px auto;
+            display: block;
+            padding: 9px;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.25s ease;
+            font-size: 13px;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #2563eb, #1d4ed8);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* ✅ Secondary Dashboard Button */
+        .btn-secondary {
+            width: 100%;
+            max-width: 320px;
+            margin: 5px auto;
+            display: block;
+            padding: 9px;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            transition: 0.25s ease;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(90deg, #059669, #047857);
+            filter: brightness(1.1); /* ✨ added */
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid white;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 8px;
+            margin-bottom: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="card" id="card">
+    <h2>🔐 ZKP Identity System</h2>
+
+    <form action="/register" method="POST" onsubmit="return handleSubmit(event)">
+        
+        <input type="text" id="name" name="name" placeholder="Enter Full Name" required>
+        <div id="nameError" class="error"></div>
+
+        <input type="number" id="age" name="age" placeholder="Enter Age" min="1" required
+               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        <div id="ageError" class="error"></div>
+
+        <input type="text" id="id_number" name="id_number"
+               placeholder="Enter KYC ID (PAN/Aadhaar simulated)" required>
+        <div id="idError" class="error"></div>
+
+        <p class="hint">KYC ID must be 6–20 characters (letters & numbers only)</p>
+
+        <button type="submit" id="verifyBtn">Verify Identity</button>
+    </form>
+
+    <!-- ✅ UX helper text -->
+    <p class="hint">Already verified? View records directly</p>
+
+    <!-- ✅ Dashboard Button -->
+    <a href="/dashboard" class="btn-secondary">📊 Go to Dashboard</a>
+
+    <p class="info">
+        Identity is verified without exposing sensitive data using Zero-Knowledge Proof logic.
+    </p>
+</div>
+
+<script>
+function validateForm() {
+    let valid = true;
+
+    const name = document.getElementById("name").value.trim();
+    const age = document.getElementById("age").value;
+    const id = document.getElementById("id_number").value.trim();
+
+    document.getElementById("nameError").innerText = "";
+    document.getElementById("ageError").innerText = "";
+    document.getElementById("idError").innerText = "";
+
+    if (name === "") {
+        document.getElementById("nameError").innerText = "Name is required";
+        valid = false;
+    }
+
+    if (age === "" || age <= 0) {
+        document.getElementById("ageError").innerText = "Enter a valid age";
+        valid = false;
+    }
+
+    if (!/^[a-zA-Z0-9]+$/.test(id)) {
+        document.getElementById("idError").innerText = "KYC ID must be alphanumeric";
+        valid = false;
+    } else if (id.length < 6) {
+        document.getElementById("idError").innerText = "Minimum 6 characters required";
+        valid = false;
+    } else if (id.length > 20) {
+        document.getElementById("idError").innerText = "Maximum 20 characters allowed";
+        valid = false;
+    }
+
+    return valid;
+}
+
+function handleSubmit(event) {
+    if (!validateForm()) {
+        event.preventDefault();
+        return false;
+    }
+
+    const btn = document.getElementById("verifyBtn");
+    btn.innerHTML = '<span class="spinner"></span> Processing...';
+    btn.disabled = true;
+
+    document.getElementById("card").classList.add("fade-out");
+
+    return true;
+}
+</script>
+
+</body>
+</html>

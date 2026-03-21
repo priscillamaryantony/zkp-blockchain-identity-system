@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtext {
+            text-align: center;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        /* ✅ UPDATED BLOCK WITH ANIMATION */
+        .block {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.25s ease;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+
+        .block:hover {
+            transform: translateY(-2px);
+        }
+
+        .latest {
+            box-shadow: 0 0 0 1px #22c55e;
+        }
+
+        /* ✅ NEW: CLICK EFFECTS */
+        .selected {
+            border: 1px solid #3b82f6 !important;
+            box-shadow: 0 0 12px rgba(59,130,246,0.6);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .selected-latest {
+            border: 1px solid #22c55e !important;
+            box-shadow: 0 0 14px rgba(34,197,94,0.8);
+            transform: translateY(-3px) scale(1.03);
+        }
+
+        .verified { color: #22c55e; }
+        .failed { color: #ef4444; }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: white;
+            font-size: 13px;
+            margin: 5px;
+        }
+
+        .btn-blue { background: #3b82f6; }
+        .btn-green { background: #22c55e; }
+        .btn-red { background: #ef4444; }
+        .btn-gray { background: #334155; }
+
+        .top-controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            margin: 5px;
+        }
+
+        .metric-card {
+            flex:1;
+            background:#1e293b;
+            padding:15px;
+            border-radius:10px;
+            text-align:center;
+        }
+
+        .metrics {
+            display:flex;
+            gap:10px;
+            margin:20px 0;
+        }
+
+        .extra-info {
+            text-align:center;
+            margin-top:10px;
+        }
+
+        .activity {
+            background:#0f172a;
+            padding:15px;
+            border-radius:10px;
+            margin-top:20px;
+        }
+
+        .activity p {
+            font-size:13px;
+            margin:5px 0;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>📊 Blockchain Dashboard</h1>
+    <p class="subtext">Full transaction history and verification records</p>
+
+    <!-- Controls -->
+    <div class="top-controls">
+
+        <a href="/dashboard" class="btn btn-gray">All</a>
+        <a href="/dashboard?filter=verified" class="btn btn-green">Verified</a>
+        <a href="/dashboard?filter=failed" class="btn btn-red">Failed</a>
+
+        <form method="GET" action="/dashboard" style="margin-top:10px;">
+            <input type="text" name="search" placeholder="Search by name or hash...">
+            <button type="submit" class="btn btn-blue">Search</button>
+        </form>
+
+        <a href="/export" class="btn btn-blue">⬇ Export CSV</a>
+
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics">
+
+        <div class="metric-card">
+            <p>Total Users</p>
+            <h2>{{ total }}</h2>
+        </div>
+
+        <div class="metric-card">
+            <p class="verified">Verified</p>
+            <h2>{{ verified }}</h2>
+        </div>
+
+        <div class="metric-card">
+            <p class="failed">Failed</p>
+            <h2>{{ failed }}</h2>
+        </div>
+
+    </div>
+
+    <!-- Extra Info -->
+    <div class="extra-info">
+        <p>
+            <b>Blockchain Status:</b>
+            {% if valid %}
+                <span style="color:#22c55e;">Secure ✅</span>
+            {% else %}
+                <span style="color:#ef4444;">Tampered ❌</span>
+            {% endif %}
+        </p>
+
+        <p>
+            Success Rate: {{ success_rate }}%
+        </p>
+    </div>
+
+    <!-- Chart -->
+    <div style="max-width:400px; margin:30px auto;">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <!-- Back -->
+    <div style="text-align:center; margin-bottom:20px;">
+        <a href="/" class="btn btn-blue">🔁 Back to Verification</a>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="activity">
+        <h3>🧾 Recent Activity</h3>
+
+        {% if chain %}
+            {% for block in chain[:5] %}
+                <p>
+                    {{ block.user }} →
+                    {% if block.proof == "VALID_USER" %}
+                        <span class="verified">Verified ({{ block.reason }})</span>
+                    {% else %}
+                        <span class="failed">Failed ({{ block.reason }})</span>
+                    {% endif %}
+                </p>
+            {% endfor %}
+        {% else %}
+            <p>No activity yet</p>
+        {% endif %}
+    </div>
+
+    <!-- Blockchain -->
+    {% for block in chain %}
+        <div class="block {% if loop.index == 1 %}latest{% endif %}" 
+             onclick="selectBlock(this, {{ 'true' if loop.index == 1 else 'false' }})">
+
+            {% if loop.index == 1 %}
+                <p style="color:#22c55e; font-size:12px;">● Latest Block</p>
+            {% endif %}
+
+            <p><b>Index:</b> {{ block.index }}</p>
+            <p><b>User:</b> {{ block.user }}</p>
+            <p><b>Time:</b> {{ block.timestamp }}</p>
+
+            {% if block.proof == "VALID_USER" %}
+                <p class="verified">
+                    <b>Status:</b> Verified User ✅ ({{ block.reason }})
+                </p>
+            {% else %}
+                <p class="failed">
+                    <b>Status:</b> Failed ❌ ({{ block.reason }})
+                </p>
+            {% endif %}
+
+            <p><b>Hashed Identity:</b> {{ block.identity[:8] }}...{{ block.identity[-6:] }}</p>
+            <p><b>Hash:</b> {{ block.hash[:8] }}...{{ block.hash[-6:] }}</p>
+            <p><b>Previous Hash:</b> {{ block.previous_hash[:8] }}...{{ block.previous_hash[-6:] }}</p>
+
+        </div>
+    {% endfor %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('myChart');
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Verified', 'Failed'],
+        datasets: [{
+            data: [{{ verified }}, {{ failed }}],
+            backgroundColor: ['#22c55e', '#ef4444']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+/* ✅ CLICK + ANIMATION LOGIC */
+function selectBlock(element, isLatest) {
+
+    document.querySelectorAll('.block').forEach(b => {
+        b.classList.remove('selected');
+        b.classList.remove('selected-latest');
+    });
+
+    if (isLatest === true || isLatest === 'true') {
+        element.classList.add('selected-latest');
+    } else {
+        element.classList.add('selected');
+    }
+}
+</script>
+
+</body>
+</html>

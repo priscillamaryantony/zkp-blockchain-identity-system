@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Result</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding-top: 40px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            transition: 0.2s;
+        }
+
+        h2 { margin-bottom: 10px; }
+
+        .success { color: #22c55e; }
+        .fail { color: #ef4444; }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            color: white;
+            transition: 0.3s;
+        }
+
+        .btn-blue { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+        .btn-green { background: linear-gradient(90deg, #10b981, #059669); }
+
+        .btn:hover { filter: brightness(1.1); }
+
+        .block {
+            margin-top: 15px;
+            padding: 12px;
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            text-align: left;
+        }
+
+        .block:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+        }
+
+        .latest {
+            box-shadow: 0 0 0 1px #22c55e;
+        }
+
+        .subtext {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .hash-text {
+            font-size: 12px;
+            color: #cbd5f5;
+        }
+
+        .copy-btn {
+            position: relative;
+            margin-left: 6px;
+            padding: 2px 6px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #334155;
+            color: white;
+        }
+
+        .copy-btn:hover {
+            background: #3b82f6;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #22c55e;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .copy-btn.show .tooltip {
+            visibility: visible;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="card">
+
+    <h2>Verification Result</h2>
+    <p>User: {{ name }}</p>
+
+    <!-- ✅ FIXED: Show reason cleanly -->
+    {% if result %}
+        <p class="success">✅ Verified</p>
+        <p class="subtext">
+            Reason: {{ chain[0].data.reason if chain and chain[0].index != 0 else "Valid User" }}
+        </p>
+    {% else %}
+        <p class="fail">❌ Not Verified</p>
+        <p class="subtext">
+            Reason: {{ chain[0].data.reason if chain and chain[0].index != 0 else "Invalid data" }}
+        </p>
+    {% endif %}
+
+    <div style="display:flex; gap:10px; justify-content:center; margin-top:15px;">
+        <a href="/" class="btn btn-blue">🔁 Verify Another User</a>
+        <a href="/dashboard" class="btn btn-green">📊 View Dashboard</a>
+    </div>
+
+    <!-- Blockchain Status -->
+    <p style="margin-top:20px;">
+        <b>Blockchain Status:</b>
+        {% if valid %}
+            <span style="color:#22c55e;">Secure ✅</span>
+        {% else %}
+            <span style="color:#ef4444;">Tampered ❌</span>
+        {% endif %}
+    </p>
+
+    <h3>📊 Blockchain Audit Trail</h3>
+    <hr style="border:0.5px solid #334155;">
+    <p class="subtext">Showing latest verification records</p>
+
+    {% for block in chain %}
+        <div class="block {% if loop.index == 1 %}latest{% endif %}">
+
+            {% if loop.index == 1 %}
+                <p style="color:#22c55e; font-size:12px;">● Latest Block</p>
+            {% endif %}
+
+            <p><b>Index:</b> {{ block.index }}</p>
+            <p><b>Time:</b> {{ block.timestamp }}</p>
+
+            {% if block.index == 0 %}
+                <p><b>Data:</b> Genesis Block</p>
+            {% else %}
+
+                {% if block.data.proof == "VALID_USER" %}
+                    <p style="color:#22c55e;">
+                        <b>Status:</b> Verified User ✅ ({{ block.data.reason }})
+                    </p>
+                {% else %}
+                    <p style="color:#ef4444;">
+                        <b>Status:</b> Failed ❌ ({{ block.data.reason }})
+                    </p>
+                {% endif %}
+
+                <!-- Identity -->
+                <p class="hash-text">
+                    <b>Identity:</b>
+                    {{ block.data.hash[:8] }}...{{ block.data.hash[-6:] }}
+                    <button onclick="copyText('{{ block.data.hash }}', this)" class="copy-btn">
+                        📋
+                        <span class="tooltip">Copied!</span>
+                    </button>
+                </p>
+
+            {% endif %}
+
+            <!-- Hash -->
+            <p class="hash-text">
+                <b>Hash:</b>
+                {{ block.hash[:8] }}...{{ block.hash[-6:] }}
+                <button onclick="copyText('{{ block.hash }}', this)" class="copy-btn">
+                    📋
+                    <span class="tooltip">Copied!</span>
+                </button>
+            </p>
+
+            <!-- Previous -->
+            <p class="hash-text">
+                <b>Previous:</b>
+                {{ block.previous_hash[:8] }}...{{ block.previous_hash[-6:] }}
+                <button onclick="copyText('{{ block.previous_hash }}', this)" class="copy-btn">
+                    📋
+                    <span class="tooltip">Copied!</span>
+                </button>
+            </p>
+
+        </div>
+    {% endfor %}
+
+</div>
+
+<script>
+function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        btn.childNodes[0].nodeValue = " ✅";
+        btn.classList.add("show");
+
+        setTimeout(() => {
+            btn.childNodes[0].nodeValue = " 📋";
+            btn.classList.remove("show");
+        }, 1200);
+
+    }).catch(() => {
+        btn.childNodes[0].nodeValue = " ❌";
+        setTimeout(() => {
+            btn.childNodes[0].nodeValue = " 📋";
+        }, 1200);
+    });
+}
+</script>
+
+</body>
+</html>
