@@ -3,7 +3,7 @@
 ## 🌐 Live Demo
 
 🚀 **Try the application live:**  
-👉 https://zkp-blockchain-identity-system.onrender.com/
+👉 [Click here to try the app](https://zkp-blockchain-identity-system-1.onrender.com/)
 
 📌 You can:
 - Verify users using ID (PAN/Aadhaar simulation)
