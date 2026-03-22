@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, redirect, url_for
 from blockchain import Blockchain, Block, hash_identity, verify_proof, is_chain_valid
 from database import init_db, insert_block, get_blocks
 import csv
@@ -20,10 +20,53 @@ logging.basicConfig(level=logging.INFO)
 my_blockchain = Blockchain()
 
 
+# 🔥 LOAD BLOCKCHAIN FROM DB (Persistence Fix)
+def load_chain_from_db():
+    rows = get_blocks()
+    chain = []
+
+    for row in rows:
+        block = Block(
+            row[1],  # index
+            {
+                "hash": row[6],
+                "proof": row[5],
+                "reason": row[7] if len(row) > 7 else "",
+                "user": row[8] if len(row) > 8 else ""
+            },
+            row[4]  # previous_hash
+        )
+
+        block.hash = row[3]
+        block.timestamp = row[2]
+
+        chain.append(block)
+
+    return chain
+
+
+# 🔥 Sync DB → Blockchain
+db_chain = load_chain_from_db()
+if db_chain:
+    my_blockchain.chain = db_chain
+
+
 # 🏠 Home Page
 @app.route('/')
 def home():
     return render_template('index.html')
+
+
+# 🔐 Login Page
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+
+# 🔓 Logout
+@app.route('/logout')
+def logout():
+    return redirect(url_for('home'))
 
 
 # 📊 Dashboard Page
@@ -34,7 +77,7 @@ def dashboard():
     blocks = []
     for row in rows:
         block = {
-            "index": row[1],
+            "index": row[1],  # ✅ keep original index
             "timestamp": row[2],
             "hash": row[3],
             "previous_hash": row[4],
@@ -45,36 +88,42 @@ def dashboard():
         }
         blocks.append(block)
 
+    # Sort latest first
+    blocks = sorted(blocks, key=lambda x: x["index"], reverse=True)
+
     # Filters
     filter_type = request.args.get('filter')
-    search_query = request.args.get('search', '').lower()
+    search_query = request.args.get('search', '').strip().lower()
+
+    filtered_blocks = blocks
 
     if filter_type == "verified":
-        blocks = [b for b in blocks if b["proof"] == "VALID_USER"]
-    elif filter_type == "failed":
-        blocks = [b for b in blocks if b["proof"] == "INVALID"]
+        filtered_blocks = [b for b in blocks if b["proof"] == "VALID_USER"]
 
-    # 🔍 Search by hash + name
+    elif filter_type == "failed":
+        filtered_blocks = [b for b in blocks if b["proof"] == "INVALID"]
+
+    # Search
     if search_query:
-        blocks = [
-            b for b in blocks
+        filtered_blocks = [
+            b for b in filtered_blocks
             if search_query in b["identity"].lower()
             or search_query in b["user"].lower()
         ]
 
-    # 📊 Metrics
-    total = len(blocks)
-    verified = sum(1 for b in blocks if b["proof"] == "VALID_USER")
+    # Metrics
+    total = len(filtered_blocks)
+    verified = sum(1 for b in filtered_blocks if b["proof"] == "VALID_USER")
     failed = total - verified
 
     success_rate = round((verified / total) * 100, 2) if total > 0 else 0
 
-    # 🔗 Blockchain integrity
+    # Blockchain integrity
     valid = is_chain_valid(my_blockchain.chain)
 
     return render_template(
         'dashboard.html',
-        chain=blocks[::-1],
+        chain=filtered_blocks,
         total=total,
         verified=verified,
         failed=failed,
@@ -83,13 +132,11 @@ def dashboard():
     )
 
 
-# 🧠 NEW: KYC VALIDATION FUNCTION
+# 🧠 KYC VALIDATION FUNCTION
 def validate_kyc(id_number):
-    # Aadhaar: 12 digits
     if id_number.isdigit() and len(id_number) == 12:
         return True, "Valid Aadhaar"
 
-    # PAN: 5 letters + 4 digits + 1 letter
     pan_pattern = r'^[A-Z]{5}[0-9]{4}[A-Z]$'
     if re.match(pan_pattern, id_number):
         return True, "Valid PAN"
@@ -102,10 +149,9 @@ def validate_kyc(id_number):
 def register():
     try:
         name = request.form.get('name', '').strip()
-        age = int(request.form.get('age', 0))
+        age = int(request.form.get('age') or 0)
         id_number = request.form.get('id_number', '').strip().upper()
 
-        # 🔒 Security
         if len(id_number) > 20:
             return "Error: ID too long"
 
@@ -115,17 +161,17 @@ def register():
         if age <= 0:
             return "Error: Invalid age"
 
-        # 🧠 KYC VALIDATION (NEW)
+        # KYC validation
         kyc_valid, kyc_message = validate_kyc(id_number)
 
-        # 🔐 Hash identity
+        # Hash identity
         hashed_user = hash_identity({
             "user": name,
             "age": age,
             "id": id_number
         })
 
-        # 🧠 Proof + Reason
+        # Proof logic
         if age < 18:
             proof = "INVALID"
             reason = "Underage"
@@ -136,10 +182,9 @@ def register():
             proof = "VALID_USER"
             reason = kyc_message
 
-        # 🧾 Logging
-        logging.info(f"{name} → {proof} ({reason})")
+        logging.info(f"[REGISTER] {name} → {proof} ({reason})")
 
-        # 🔗 Create block
+        # ✅ Correct blockchain index
         new_block = Block(
             len(my_blockchain.chain),
             {
@@ -153,17 +198,21 @@ def register():
 
         my_blockchain.add_block(new_block)
 
-        # 💾 Save to DB
+        # Save to DB
         insert_block(new_block)
 
-        # ✅ Verify proof
+        # Verify proof
         result = verify_proof(proof)
 
-        # 🔐 Chain validation
+        # Validate chain
         valid = is_chain_valid(my_blockchain.chain)
 
-        # 📊 Latest blocks
+        # Latest blocks
         recent_blocks = my_blockchain.chain[::-1][:5]
+
+        # ✅ Ensure Genesis always included
+        if my_blockchain.chain and my_blockchain.chain[0] not in recent_blocks:
+            recent_blocks.append(my_blockchain.chain[0])
 
         return render_template(
             'result.html',

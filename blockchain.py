@@ -1,5 +1,6 @@
 import hashlib
 import datetime
+import json
 
 
 # 🔐 Hash Identity
@@ -7,7 +8,7 @@ def hash_identity(data):
     """
     Hash user identity securely using SHA-256
     """
-    data_string = str(data)
+    data_string = json.dumps(data, sort_keys=True)
     return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
 
 
@@ -33,36 +34,47 @@ def verify_proof(proof):
 class Block:
     def __init__(self, index, data, previous_hash):
         self.index = index
-        self.timestamp = str(datetime.datetime.now())
+        self.timestamp = datetime.datetime.utcnow().isoformat()  # ✅ ISO format
         self.data = data
         self.previous_hash = previous_hash
         self.hash = self.calculate_hash()
 
     def calculate_hash(self):
         """
-        Generate SHA-256 hash of block contents
+        Generate SHA-256 hash of full block contents
         """
-        block_string = f"{self.index}{self.timestamp}{self.data}{self.previous_hash}"
+        block_data = {
+            "index": self.index,
+            "timestamp": self.timestamp,
+            "data": json.loads(json.dumps(self.data)),  # ✅ safe copy
+            "previous_hash": self.previous_hash
+        }
+
+        block_string = json.dumps(block_data, sort_keys=True)
         return hashlib.sha256(block_string.encode('utf-8')).hexdigest()
 
 
 # ⛓️ Blockchain Class
 class Blockchain:
+    """
+    Simple blockchain implementation with genesis block
+    """
+
     def __init__(self):
         self.chain = [self.create_genesis_block()]
 
     def create_genesis_block(self):
         """
-        Create the first block in blockchain
+        Create the first block (Genesis Block)
         """
-        return Block(0, "Genesis Block", "0")
+        return Block(0, {"info": "Genesis Block"}, "0")  # ✅ consistent format
 
     def get_latest_block(self):
         return self.chain[-1]
 
     def add_block(self, new_block):
         """
-        Add a new block to the chain
+        Add a new block to the blockchain
         """
         new_block.previous_hash = self.get_latest_block().hash
         new_block.hash = new_block.calculate_hash()
@@ -78,7 +90,7 @@ def is_chain_valid(chain):
         current = chain[i]
         previous = chain[i - 1]
 
-        # Check hash validity
+        # Check hash integrity
         if current.hash != current.calculate_hash():
             return False
 

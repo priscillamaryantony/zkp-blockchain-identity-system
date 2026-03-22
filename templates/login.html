@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 350px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        h2 {
+            margin-bottom: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: none;
+            color: #0f172a;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #2563eb, #1d4ed8);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .demo {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #cbd5f5;
+            line-height: 1.6;
+        }
+
+        .warning {
+            font-size: 12px;
+            color: #eab308;
+            margin-top: 6px;
+        }
+
+        .back {
+            display: block;
+            margin-top: 18px;
+            font-size: 12px;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+
+        .back:hover {
+            color: #3b82f6;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🔐 Admin Login</h2>
+
+    <input type="text" id="username" placeholder="Username" oninput="clearError()">
+    <input type="password" id="password" placeholder="Password" oninput="clearError()">
+
+    <button onclick="login()">Login</button>
+
+    <p id="error" class="error"></p>
+
+    <div class="demo">
+        <b>Demo Credentials (for testing only)</b><br>
+        Username: admin<br>
+        Password: 1234
+    </div>
+
+    <p class="warning">⚠️ For demonstration purposes only</p>
+
+    <a href="/" class="back">← Back to Verification</a>
+
+    <div class="footer">
+        © 2026 Priscilla Mary Antony
+    </div>
+</div>
+
+<script>
+function login() {
+    const user = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value.trim();
+
+    if (user === "admin" && pass === "1234") {
+        window.location.href = "/dashboard";
+    } else {
+        document.getElementById("error").innerText = "Invalid credentials";
+    }
+}
+
+// ✅ Press Enter to login
+document.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        login();
+    }
+});
+
+// ✅ Clear error when typing
+function clearError() {
+    document.getElementById("error").innerText = "";
+}
+</script>
+
+</body>
+</html>
