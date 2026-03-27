@@ -200,3 +200,8 @@ Password: 1234
 
 **Priscilla Mary Antony**  
 © 2026
+
+## ⚠️ Disclaimer
+
+This project is developed as part of my MBA Major Project (IT & Fintech). 
+Unauthorized copying, reproduction, or reuse of this work without permission is strictly prohibited.
